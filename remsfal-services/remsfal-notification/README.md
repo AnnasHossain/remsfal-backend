@@ -90,10 +90,95 @@ QUARKUS_MAILER_START_TLS=REQUIRED
 > (`…@remsfal.dev`) are not deliverable. To receive the emails yourself, log in through the dev login with
 > your own email address (the dev login accepts any address).
 
-Remove or rename the `.env` file to switch back to Mailpit.
+Remove the SMTP overrides from `.env` to switch back to Mailpit.
 
 > **_NOTE:_** `QUARKUS_MAILER_SSL` is deprecated, use `QUARKUS_MAILER_TLS` instead. If you still have an
 > `.env` file from an older setup that contains `_DEV_QUARKUS_MAILER_MOCK=false`, it is no longer needed.
+
+## Browser push notifications
+
+Generate a VAPID key pair once per environment with `npx --yes web-push generate-vapid-keys --json`.
+Set these variables on the notification service. For local development, put them in this module's
+Git-ignored `.env` and start the service from this module.
+
+| Variable | Value |
+|----------|-------|
+| `DE_REMSFAL_WEB_PUSH_PUBLIC_KEY` | Generated `publicKey` |
+| `DE_REMSFAL_WEB_PUSH_PRIVATE_KEY` | Generated `privateKey`, stored as a secret |
+| `DE_REMSFAL_WEB_PUSH_SUBJECT` | A contact URI such as `mailto:admin@example.org` |
+
+Set all three variables together. Leaving all three unset disables browser push. REMSFAL serves the
+public key at `/notification/v1/web-push/public-key` for browser registration. Keep the private key
+on the notification service. Keep the key pair stable across restarts. Changing the public key
+requires browsers to subscribe again.
+
+For local browser push, use `localhost` and start Vite from the frontend checkout with
+`VITE_SERVICE_WORKER_ENABLED=true npm run dev`. For a deployed frontend, use HTTPS and enable
+the service worker. See the [frontend configuration](../../../Frontend/README.md#configuration).
+
+Enable browser notifications and send a test notification from the top bar of the signed-in app.
+To test an issue notification, create a tenant report and use the manager's issue form to change only
+its status. When an issue is visible to tenants, a status change notifies the reporting tenant
+if their account belongs to the linked rental agreement. For an issue created by a manager,
+the tenant accounts linked to the agreement receive the status notification. The account that
+changed the status is excluded.
+
+## Native push notifications
+
+The top bar uses a separate native subscription API at `/notification/v1/push-subscriptions`.
+Registration accepts the Capacitor device token and the transport (`FCM` for Android,
+`APNS` for iOS). The API returns a subscription ID. The test and delete operations use
+that ID and are restricted to the owner. The test targets one installation.
+Issue status updates use the same recipient rule across browser and native push.
+
+| Variable | Purpose |
+|----------|---------|
+| `FCM_SERVICE_ACCOUNT_PATH` | Path to the Firebase service account JSON used for Android push |
+| `APNS_TEAM_ID` | Apple Developer Team ID |
+| `APNS_KEY_ID` | Key ID of the APNs signing key |
+| `APNS_PRIVATE_KEY_PATH` | Path to the APNs `.p8` private key |
+| `APNS_TOPIC` | App bundle ID, defaults to `de.remsfal.app` |
+| `APNS_SANDBOX` | Match the app's signed APNs entitlement. Defaults to `true` in dev and `false` otherwise |
+
+For local development, put these variables in this module's Git-ignored `.env`. Use paths
+readable by the notification service and keep the private files outside version control.
+Restart the notification service after making configuration changes. Start the shared Compose
+infrastructure and the platform service for local login and JWT verification.
+
+For **Android**, use a service account authorized to send to the Firebase project that issued
+the app's FCM tokens. Get the Android app configuration file from that project and put it at
+`Frontend/android/app/google-services.json`.
+[Firebase Android setup](https://firebase.google.com/docs/android/setup)
+
+For **iOS**, the notification service talks directly to APNs. Use an APNs-enabled signing key
+from the Apple team that owns the app ID. For a development-signed build, the configuration
+looks like this:
+
+```dotenv
+APNS_TEAM_ID=YOUR_TEAM_ID
+APNS_KEY_ID=YOUR_KEY_ID
+APNS_PRIVATE_KEY_PATH=/absolute/path/to/AuthKey_YOUR_KEY_ID.p8
+APNS_TOPIC=de.remsfal.app
+APNS_SANDBOX=true
+```
+
+Match `APNS_TOPIC` to the Xcode bundle identifier and `APNS_SANDBOX` to the signed app's
+`aps-environment`. Use `true` for `development` and `false` for `production`, including TestFlight.
+Each notification service instance sends to one APNs environment.
+[Apple APNs entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/aps-environment)
+
+See [native push setup in the frontend](../../../Frontend/README.md#native-push-setup) for the
+Firebase app setup and the Apple Developer, CocoaPods and Xcode steps.
+
+### Push troubleshooting
+
+| Test endpoint response | Meaning |
+|------------------------|---------|
+| `204` | The push service accepted the request. Check the target browser or device for display. |
+| `404` | The subscription ID could not be found for the signed-in user. Register the current installation again. |
+| `410` | The push service reported an expired subscription. Register the current installation again. |
+| `502` | Delivery to the push service failed. Check the notification service logs and the provider configuration. |
+| `503` | The selected push transport is unavailable. Check its environment variables on the notification service. |
 
 ## Running the application in dev mode
 

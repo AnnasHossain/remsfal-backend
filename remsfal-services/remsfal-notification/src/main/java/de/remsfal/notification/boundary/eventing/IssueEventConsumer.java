@@ -4,6 +4,7 @@ import de.remsfal.core.json.UserJson;
 import de.remsfal.core.json.eventing.IssueEventJson;
 import de.remsfal.notification.control.EmailSettingsController;
 import de.remsfal.notification.control.MailingController;
+import de.remsfal.notification.control.PushNotificationController;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -28,6 +29,9 @@ public class IssueEventConsumer {
 
     @Inject
     EmailSettingsController emailSettingsController;
+
+    @Inject
+    PushNotificationController pushController;
 
     @Blocking
     @Incoming(IssueEventJson.TOPIC_ENRICHED)
@@ -80,6 +84,7 @@ public class IssueEventConsumer {
     private Uni<Void> handleIssueUpdated(IssueEventJson event) {
         logger.infov("Handling ISSUE_UPDATED for issue: {0}", event.getIssue().getTitle());
         Uni<Void> result = Uni.createFrom().voidItem();
+        pushController.sendIssueStatusUpdate(event);
         if (isRecipient(event, event.getAssignee())) {
             result = result.chain(v -> mailingController.sendIssueUpdatedEmail(event, event.getAssignee()));
         }

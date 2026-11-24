@@ -190,21 +190,25 @@ public class IssueController {
         }
         if (issue.getAssigneeId() != null) {
             entity.setAssigneeId(issue.getAssigneeId());
-            issueEventProducer.sendIssueAssigned(entity, principal);
-        } else {
-            issueEventProducer.sendIssueUpdated(entity, principal);
         }
         // Relations are managed through separate endpoints (PUT/POST/DELETE)
         // and should not be updated via PATCH
 
-        if (entity.getAgreementId() != null && Boolean.TRUE.equals(entity.isVisibleToTenants())
-            && issue.getStatus() != null && issue.getStatus() != oldStatus) {
+        final boolean statusChanged = issue.getStatus() != null && issue.getStatus() != oldStatus;
+        final IssueModel updated = issueRepository.update(entity);
+        if (issue.getAssigneeId() != null) {
+            issueEventProducer.sendIssueAssigned(updated, principal);
+        } else {
+            issueEventProducer.sendIssueUpdated(updated, principal, statusChanged ? oldStatus : null);
+        }
+
+        if (entity.getAgreementId() != null && Boolean.TRUE.equals(entity.isVisibleToTenants()) && statusChanged) {
             timelineController.createTimelineEntry(entity.getAgreementId(), entity.getId(),
                 entity.getProjectId(), principal, UserContext.MANAGER,
                 MessagePurpose.STATUS_CHANGED, entity.getStatus().name());
         }
 
-        return issueRepository.update(entity);
+        return updated;
     }
 
     public void deleteIssue(final UUID issueId) {

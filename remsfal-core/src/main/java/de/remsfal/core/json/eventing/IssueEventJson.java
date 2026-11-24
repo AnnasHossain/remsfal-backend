@@ -21,6 +21,7 @@ import de.remsfal.core.json.ticketing.OrderPlacementJson;
 import de.remsfal.core.json.ticketing.QuotationJson;
 import de.remsfal.core.json.ticketing.QuotationRequestJson;
 import de.remsfal.core.json.ticketing.TenantTimelineJson;
+import de.remsfal.core.model.ticketing.IssueModel.IssueStatus;
 import jakarta.annotation.Nullable;
 
 /**
@@ -61,6 +62,10 @@ public interface IssueEventJson {
     IssueEventType getIssueEventType();
 
     UUID getIssueId();
+
+    /** Previous status, set on a manager's ISSUE_UPDATED event when the status changed. */
+    @Nullable
+    IssueStatus getPreviousStatus();
 
     /**
      * The full issue data as stored in the issue table. Attachments are always {@code null}

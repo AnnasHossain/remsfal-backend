@@ -40,6 +40,9 @@ public final class NotificationEcbArchitectureRules {
 
             "java..",
             "jakarta..",
+            "com.fasterxml.jackson..",
+            "com.google.auth..",
+            "com.google.firebase..",
             "org.jboss.logging..",
             "io.quarkus..",
             "org.eclipse.microprofile..",
@@ -68,7 +71,8 @@ public final class NotificationEcbArchitectureRules {
             "org.jboss.logging..",
             "io.quarkus..",
             "org.eclipse.microprofile..",
-            "io.smallrye.."
+            "io.smallrye..",
+            "com.interaso.webpush.."
     };
 
     /**

@@ -1,5 +1,6 @@
 package de.remsfal.service.control;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -87,6 +88,7 @@ public class IssueEventEnrichmentController {
             .issueEventType(event.getIssueEventType())
             .issueId(event.getIssueId())
             .issue(event.getIssue())
+            .previousStatus(event.getPreviousStatus())
             .project(project)
             .rentalAgreement(rentalAgreement)
             .rentalUnit(rentalUnit != null ? RentalUnitNodeDataJson.valueOf(rentalUnit) : event.getRentalUnit())
@@ -133,8 +135,10 @@ public class IssueEventEnrichmentController {
             return event.getRentalAgreement();
         }
         return rentalAgreementRepository.findByIdOptional(agreementId)
+            .filter(agreement -> event.getPreviousStatus() == null
+                || Objects.equals(agreement.getProjectId(), event.getIssue().getProjectId()))
             .map(RentalAgreementJson::valueOf)
-            .orElse(event.getRentalAgreement());
+            .orElse(event.getPreviousStatus() == null ? event.getRentalAgreement() : null);
     }
 
     private RentalUnitEntity findRentalUnit(final IssueJson issue) {

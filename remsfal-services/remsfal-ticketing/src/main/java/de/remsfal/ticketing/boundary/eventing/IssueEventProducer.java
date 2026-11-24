@@ -21,6 +21,7 @@ import de.remsfal.core.json.ticketing.QuotationRequestJson;
 import de.remsfal.core.json.ticketing.TenantTimelineJson;
 import de.remsfal.core.model.UserModel;
 import de.remsfal.core.model.ticketing.IssueModel;
+import de.remsfal.core.model.ticketing.IssueModel.IssueStatus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -46,11 +47,15 @@ public class IssueEventProducer {
     }
 
     public void sendIssueUpdated(final IssueModel issue, final UserModel actor) {
+        sendIssueUpdated(issue, actor, null);
+    }
+
+    public void sendIssueUpdated(final IssueModel issue, final UserModel actor, final IssueStatus previousStatus) {
         if (issue == null) {
             logger.warn(SKIPPING_ISSUE_EVENT_BECAUSE_ISSUE_IS_NULL);
             return;
         }
-        emit(baseBuilder(IssueEventType.ISSUE_UPDATED, issue, actor).build());
+        emit(baseBuilder(IssueEventType.ISSUE_UPDATED, issue, actor).previousStatus(previousStatus).build());
     }
 
     public void sendIssueAssigned(final IssueModel issue, final UserModel actor) {

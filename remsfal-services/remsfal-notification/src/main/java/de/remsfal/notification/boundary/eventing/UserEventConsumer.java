@@ -9,6 +9,8 @@ import org.jboss.logging.Logger;
 import de.remsfal.core.json.eventing.UserEventJson;
 import de.remsfal.core.json.eventing.UserEventJson.UserEventType;
 import de.remsfal.notification.control.EmailSettingsController;
+import de.remsfal.notification.control.PushNotificationController;
+import de.remsfal.notification.control.WebPushController;
 import io.smallrye.common.annotation.Blocking;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -22,6 +24,12 @@ public class UserEventConsumer {
     @Inject
     EmailSettingsController emailSettingsController;
 
+    @Inject
+    PushNotificationController pushController;
+
+    @Inject
+    WebPushController webPushController;
+
     @Blocking
     @Incoming(UserEventJson.TOPIC)
     public CompletionStage<Void> consume(final Message<UserEventJson> msg) {
@@ -32,6 +40,8 @@ public class UserEventConsumer {
         }
         if (event.getUserEventType() == UserEventType.USER_DELETED) {
             emailSettingsController.deleteSettings(event.getUserId());
+            webPushController.deleteSubscriptions(event.getUserId());
+            pushController.deleteSubscriptions(event.getUserId());
             logger.infov("Processed user delete event for notification anonymization (userId={0})", event.getUserId());
         }
         return msg.ack();
